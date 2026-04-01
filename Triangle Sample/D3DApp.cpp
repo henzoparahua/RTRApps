@@ -24,7 +24,6 @@ void D3DApp::LoadPipeline()
         if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
         {
             debugController->EnableDebugLayer();
-
             dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
         }
     }
@@ -60,7 +59,10 @@ void D3DApp::LoadPipeline()
     queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-    ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
+    ThrowIfFailed(m_device->CreateCommandQueue(
+        &queueDesc, 
+        IID_PPV_ARGS(&m_commandQueue)
+    ));
 
     //  Describe and create the Swap Chain
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -83,12 +85,17 @@ void D3DApp::LoadPipeline()
     ));
 
 
-    ThrowIfFailed(factory->MakeWindowAssociation(Win32App::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
+    ThrowIfFailed(factory->MakeWindowAssociation(
+        Win32App::GetHwnd(), 
+        DXGI_MWA_NO_ALT_ENTER)
+    );
 
     ThrowIfFailed(swapChain.As(&m_swapChain));
     frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
     //  Create Descriptor Heap
+    //  A Descriptor Heap can be thought of as an array of descriptors.
+    //  Where each descriptor fully describes an object to the GPU.
     {
         //  Describe and Create a render target view (RTV) descriptor heap
         D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -113,13 +120,22 @@ void D3DApp::LoadPipeline()
         }
     }
 
-    ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
+    ThrowIfFailed(m_device->CreateCommandAllocator(
+        D3D12_COMMAND_LIST_TYPE_DIRECT, 
+        IID_PPV_ARGS(&m_commandAllocator)
+    ));
 }
 
 void D3DApp::LoadAssets()
 {
     //  Create the Command List
-    ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+    ThrowIfFailed(m_device->CreateCommandList(
+        0, 
+        D3D12_COMMAND_LIST_TYPE_DIRECT, 
+        m_commandAllocator.Get(), 
+        nullptr, 
+        IID_PPV_ARGS(&m_commandList)
+    ));
 
     ThrowIfFailed(m_commandList->Close());
 
@@ -151,7 +167,6 @@ void D3DApp::OnRender()
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandList), ppCommandList);
 
     ThrowIfFailed(m_swapChain->Present(1, 0));
-
     WaitForPreviousFrame();
 }
 
@@ -159,7 +174,6 @@ void D3DApp::OnDestroy()
 {
     //  Ensure the GPU is no longer referencing resources that are about to be cleaned up by the destructor.
     WaitForPreviousFrame();
-
     CloseHandle(fenceEvent);
 }
 
@@ -167,7 +181,10 @@ void D3DApp::PopulateCommandList()
 {
     ThrowIfFailed(m_commandAllocator->Reset());
 
-    ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+    ThrowIfFailed(m_commandList->Reset(
+        m_commandAllocator.Get(), 
+        m_pipelineState.Get()
+    ));
 
     //  Indicate that the back buffer will be used as a render target.
     {
@@ -180,10 +197,14 @@ void D3DApp::PopulateCommandList()
         m_commandList->ResourceBarrier(1, &rtvState);
     }
 
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), frameIndex, m_rtvDescriptorSize);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+        m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), 
+        frameIndex, 
+        m_rtvDescriptorSize
+    );
 
     //  Record Commands.
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
     //  Indicate that the back buffer will be used to present.
