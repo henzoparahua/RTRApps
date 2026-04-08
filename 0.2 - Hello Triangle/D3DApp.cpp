@@ -202,9 +202,9 @@ void D3DApp::LoadAssets()
         //  Define the geometry for a triangle
         Vertex triangle_vertices[] =
         {
-            { { 0.0f, 0.3f * m_aspectRatio, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-            { { 0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-            { { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f}}
+            { { 0.0f, 0.3f * m_aspectRatio, 0.0f }, { 0.275f, 0.835f, 1.0f, 1.0f } },
+            { { 0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.875f, 0.61f, 0.93f, 1.0f } },
+            { { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.9f, 0.9f, 0.5f}}
         };
 
         const UINT vertex_buffer_size = sizeof(triangle_vertices);
@@ -305,23 +305,10 @@ void D3DApp::PopulateCommandList()
         m_rtvDescriptorSize
     );
 
-    //  Indicate that the backbuffer will be used as a render target
-    {
-        auto rtvState{ CD3DX12_RESOURCE_BARRIER::Transition(
-            m_renderTargets[frameIndex].Get(),
-            D3D12_RESOURCE_STATE_PRESENT,
-            D3D12_RESOURCE_STATE_RENDER_TARGET
-        ) };
-
-        m_commandList->ResourceBarrier(
-            1, &rtvState
-        );
-
-        m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-    }
+    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
 
     //  Record Commands.
-    const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+    const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     m_commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
