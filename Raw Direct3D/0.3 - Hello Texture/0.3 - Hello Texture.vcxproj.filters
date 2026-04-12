@@ -31,6 +31,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="shaders.hlsl" />
+    <FxCompile Include="shaders.hlsl" />
   </ItemGroup>
 </Project>

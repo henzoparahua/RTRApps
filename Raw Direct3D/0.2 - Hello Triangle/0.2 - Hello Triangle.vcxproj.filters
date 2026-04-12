@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="D3DApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D3DApp.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -28,6 +28,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <FxCompile Include="shaders.hlsl" />
   </ItemGroup>
 </Project>

@@ -7,12 +7,13 @@ using Microsoft::WRL::ComPtr;
 
 class D3DApp : public DXSample
 {
-	static const UINT NumFrames = 2;
+	static const UINT NumFrames = 2, texture_pixel_size = 4,
+		texture_width = 256, texture_height = 256;
 
-	struct Vertex 
+	struct Vertex
 	{
 		XMFLOAT3 pos;
-		XMFLOAT4 color;
+		XMFLOAT2 uv;
 	};
 
 	//	Pipeline Objects
@@ -25,6 +26,7 @@ class D3DApp : public DXSample
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	ComPtr<ID3D12DescriptorHeap> m_srvHeap;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	UINT m_rtvDescriptorSize;
@@ -32,6 +34,7 @@ class D3DApp : public DXSample
 	//	Resources
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	ComPtr<ID3D12Resource> m_texture;
 
 	//	Synchronization objects.
 	UINT frameIndex;
@@ -50,6 +53,7 @@ public:
 
 	virtual void OnInit();
 	virtual void OnUpdate();
+	std::vector<UINT8> GenerateTextureData();
 	virtual void OnRender();
 	virtual void OnDestroy();
 };
