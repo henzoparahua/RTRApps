@@ -165,7 +165,52 @@ void D3DApp::LoadAssets()
 
 		) >> chk;
 
-		//	Definindo o layout do Vertex Input, 1. Estágio da Pipeline, lembra??? Idiota.
-		
+		//	Definindo o vertex input layout
+		D3D12_INPUT_ELEMENT_DESC input_element_descs[]{
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+		};
+
+		//	Descrevendo e criando o PSO
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
+		pso_desc.InputLayout = { input_element_descs, _countof(input_element_descs) };
+		pso_desc.pRootSignature = m_root_signature.Get();
+		pso_desc.VS = CD3DX12_SHADER_BYTECODE(vertex_shader_data, vertex_shader_data_length);
+		pso_desc.PS = CD3DX12_SHADER_BYTECODE(pixel_shader_data, pixel_shader_data_length);
+		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		pso_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		pso_desc.DepthStencilState.DepthEnable = FALSE;
+		pso_desc.DepthStencilState.StencilEnable = FALSE;
+		pso_desc.SampleMask = UINT_MAX;
+		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		pso_desc.NumRenderTargets = 1;
+		pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		pso_desc.SampleDesc.Count = 1;
+		m_device->CreateGraphicsPipelineState(
+			&pso_desc,
+			IID_PPV_ARGS(&m_pipeline_state)
+		) >> chk;
+	}
+
+	//	Criando a Command List
+	m_device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_command_allocator.Get(),
+		m_pipeline_state.Get(),
+		IID_PPV_ARGS(&m_command_list)
+	) >> chk;
+	m_command_list->Close();
+
+	//	Criando o Vertex Buffer
+	{
+		//	Definindo os valores de cada vertex
+		Vertex triangle_vertices[] {
+			{ { 0.0f, 0.3f * m_aspectRatio, 0.0f }, { 0.275f, 0.835f, 1.0f, 1.0f } },
+			{ { 0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.875f, 0.61f, 0.93f, 1.0f } },
+			{ { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.9f, 0.9f, 0.5f}}
+		};
+
+		const UINT vertices_buffer_size = sizeof(triangle_vertices);
 	}
 }
