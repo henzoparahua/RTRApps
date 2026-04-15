@@ -237,5 +237,79 @@ void D3DApp::LoadAssets()
 		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 	}
 
+	//	Criando e gravando o bundle
+	{
+		m_device->CreateCommandList(
+			0,
+			D3D12_COMMAND_LIST_TYPE_BUNDLE,
+			m_bundle_allocator.Get(),
+			m_pipeline_state.Get(),
+			IID_PPV_ARGS(&m_bundle)
+		);
+		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
+		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_bundle->DrawInstanced(3, 1, 0, 0);
+		m_bundle->Close() >> chk;
+	}
 
+	//	Criando e sincroniazndo os Assets até serem upados na GPU
+	{
+		m_device->CreateFence(
+			0,
+			D3D12_FENCE_FLAG_NONE,
+			IID_PPV_ARGS(&m_fence)
+		) >> chk;
+		m_fence_value = 1;
+
+		//	Criando um handle para o evento para ter a sincronização dos frames
+		m_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (m_fence_event == nullptr)
+		{
+			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+		}
+
+		WaitForPreviousFrame();
+	}
+}
+
+void D3DApp::OnUpdate()
+{
+
+}
+
+void D3DApp::OnRender()
+{
+	PopulateCommandList();
+	
+	//	Executa a Command List e apresenta os quadros na tela super divah.
+	ID3D12CommandList* command_lists[]{ m_command_list.Get() };
+	m_command_queue->ExecuteCommandLists(_countof(command_lists), command_lists);
+	m_swap_chain->Present(1, 0) >> chk;
+
+	WaitForPreviousFrame();
+}
+
+void D3DApp::OnDestroy()
+{
+	WaitForPreviousFrame();
+	CloseHandle(m_fence_event);
+}
+
+void D3DApp::PopulateCommandList()
+{
+	m_command_allocator->Reset() >> chk;
+	m_command_list->Reset(m_command_allocator.Get(), m_pipeline_state.Get()) >> chk;
+	
+	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
+	m_command_list->RSSetViewports(1, &m_viewport);
+	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
+
+	{
+		auto resource_barrier_transition{ CD3DX12_RESOURCE_BARRIER::Transition(
+			m_render_targets[m_frame_index].Get(),
+			D3D12_RESOURCE_STATE_PRESENT,
+			D3D12_RESOURCE_STATE_RENDER_TARGET
+		) };
+		m_command_list->ResourceBarrier(1, &resource_barrier_transition);
+	}
 }
