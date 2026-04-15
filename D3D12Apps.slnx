@@ -4,6 +4,7 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Raw DirectX 12/">
+    <Project Path="0.4 - Hello Bundles/0.4 - Hello Bundles.vcxproj" Id="3b3a37fd-1f68-414b-96c1-d57fd30a8715" />
     <Project Path="Raw Direct3D/0.1 - Hello Direct3D/0.1 - Hello Direct3D.vcxproj" Id="dfed592b-50b9-4635-bd54-99ab355198c0" />
     <Project Path="Raw Direct3D/0.2 - Hello Triangle/0.2 - Hello Triangle.vcxproj" Id="13e378c7-03c2-477b-bdc9-2299b5315c5d" />
     <Project Path="Raw Direct3D/0.3 - Hello Texture/0.3 - Hello Texture.vcxproj" Id="91404f9f-d741-4419-972c-9ab6498da10a" />

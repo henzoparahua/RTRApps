@@ -404,10 +404,10 @@ std::vector<UINT8> D3DApp::GenerateTextureData()
             pointer_data[n + 3] = 0xff; // A
         }
         else {
-            pointer_data[n] = 0x00;     // R
-            pointer_data[n + 1] = 0xff; // G
-            pointer_data[n + 2] = 0xff; // B
-            pointer_data[n + 3] = 0xff; // A
+            pointer_data[n] = 0x4A;     // R
+            pointer_data[n + 1] = 0x5D; // G
+            pointer_data[n + 2] = 0x23; // B
+            pointer_data[n + 3] = 0xFF; // A
         }
     }
 
