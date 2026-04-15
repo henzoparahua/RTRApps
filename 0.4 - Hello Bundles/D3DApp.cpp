@@ -208,9 +208,34 @@ void D3DApp::LoadAssets()
 		Vertex triangle_vertices[] {
 			{ { 0.0f, 0.3f * m_aspectRatio, 0.0f }, { 0.275f, 0.835f, 1.0f, 1.0f } },
 			{ { 0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.875f, 0.61f, 0.93f, 1.0f } },
-			{ { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.9f, 0.9f, 0.5f}}
+			{ { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.9f, 0.9f, 0.5f } }
 		};
 
 		const UINT vertices_buffer_size = sizeof(triangle_vertices);
+
+		{
+			auto heap_properties{ CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD) };
+			auto resource_desc_size{ CD3DX12_RESOURCE_DESC::Buffer(vertices_buffer_size) };
+			m_device->CreateCommittedResource(
+				&heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&resource_desc_size,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_vertex_buffer)
+			) >> chk;
+		}
+
+		UINT8* vertex_data_begin;
+		CD3DX12_RANGE read_range(0, 0);
+		m_vertex_buffer->Map(0, &read_range, reinterpret_cast<void**>(&vertex_data_begin)) >> chk;
+		memcpy(vertex_data_begin, triangle_vertices, sizeof(triangle_vertices));
+		m_vertex_buffer->Unmap(0, nullptr);
+
+		m_vertex_buffer_view.BufferLocation = m_vertex_buffer->GetGPUVirtualAddress();
+		m_vertex_buffer_view.SizeInBytes = vertices_buffer_size;
+		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 	}
+
+
 }
