@@ -248,6 +248,7 @@ void D3DApp::LoadAssets()
 		);
 		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
 		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
 		m_bundle->DrawInstanced(3, 1, 0, 0);
 		m_bundle->Close() >> chk;
 	}
@@ -304,6 +305,7 @@ void D3DApp::PopulateCommandList()
 	m_command_list->RSSetViewports(1, &m_viewport);
 	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
+	//	Setando o  back buffer como render target
 	{
 		auto resource_barrier_transition{ CD3DX12_RESOURCE_BARRIER::Transition(
 			m_render_targets[m_frame_index].Get(),
@@ -312,4 +314,49 @@ void D3DApp::PopulateCommandList()
 		) };
 		m_command_list->ResourceBarrier(1, &resource_barrier_transition);
 	}
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(
+		m_rtv_heap->GetCPUDescriptorHandleForHeapStart(), 
+		m_frame_index, 
+		m_rtv_descriptor_size
+	);
+	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
+
+	//	Gravando comandos
+	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
+	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
+
+	//	Executa o comandos gravados no bundle (é para isso que esse projeto foi feito :p)
+	m_command_list->ExecuteBundle(m_bundle.Get());
+
+	//	Indica que o back buffer vai ser apresentado
+	{
+		auto resource_barrier_transition{ CD3DX12_RESOURCE_BARRIER::Transition(
+			m_render_targets[m_frame_index].Get(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PRESENT
+		) };
+		m_command_list->ResourceBarrier(
+			1,
+			&resource_barrier_transition
+		);
+	}
+
+	m_command_list->Close() >> chk;
+}
+
+void D3DApp::WaitForPreviousFrame()
+{
+	const UINT64 fence = m_fence_value;
+	m_command_queue->Signal(m_fence.Get(), fence) >> chk;
+	m_fence_value++;
+
+	//	Aguarda a finalização do frame
+	if (m_fence->GetCompletedValue() < fence)
+	{
+		m_fence->SetEventOnCompletion(fence, m_fence_event) >> chk;
+		WaitForSingleObject(m_fence_event, INFINITE);
+	}
+
+	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
 }
