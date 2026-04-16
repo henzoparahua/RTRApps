@@ -30,7 +30,7 @@ class D3DApp : public DXSample
 	ComPtr<ID3D12Resource>  m_render_targets[num_frames];
 	ComPtr<ID3D12CommandAllocator> m_command_allocator;
 	ComPtr<ID3D12CommandQueue> m_command_queue;
-	ComPtr<ID3D12RootSignature1> m_root_signature;
+	ComPtr<ID3D12RootSignature> m_root_signature;
 	ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
 	ComPtr<ID3D12DescriptorHeap> m_cbv_heap;
 	ComPtr<ID3D12PipelineState> m_pipeline_state;

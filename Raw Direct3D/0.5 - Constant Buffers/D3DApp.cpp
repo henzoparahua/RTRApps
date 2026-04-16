@@ -61,7 +61,9 @@ void D3DApp::LoadPipeline()
 				DXGI_ADAPTER_DESC3 desc;
 				hardware_adapter->GetDesc3(&desc);
 
-				if (!(desc.Flags) & DXGI_ADAPTER_FLAG_SOFTWARE) {
+				if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) { continue; }
+
+				if (SUCCEEDED(D3D12CreateDevice(temp_adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_device)))) {
 					break;
 				}
 			}
@@ -136,7 +138,7 @@ void D3DApp::LoadAssets()
 {
 	//	Create a Root Signature consisting of a descriptor table with a single CBV
 	{
-		D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data{ {} };
+		D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data{};
 		static const D3D_ROOT_SIGNATURE_VERSION root_signature_levels[]{
 			D3D_ROOT_SIGNATURE_VERSION_1_2, D3D_ROOT_SIGNATURE_VERSION_1_1, D3D_ROOT_SIGNATURE_VERSION_1_0
 		};
@@ -337,7 +339,7 @@ void D3DApp::PopulateCommandList()
 
 	{
 		auto resource_barrier{
-			CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[num_frames].Get(),
+			CD3DX12_RESOURCE_BARRIER::Transition(m_render_targets[m_frame_index].Get(),
 				D3D12_RESOURCE_STATE_PRESENT,
 				D3D12_RESOURCE_STATE_RENDER_TARGET
 		)};
@@ -370,4 +372,18 @@ void D3DApp::PopulateCommandList()
 	}
 
 	m_command_list->Close() >> chk;
+}
+
+void D3DApp::WaitForPreviousFrame()
+{
+	const UINT64 fence{ m_fence_value };
+	m_command_queue->Signal(m_fence.Get(), fence) >> chk;
+	m_fence_value++;
+
+	if (m_fence->GetCompletedValue() < fence)
+	{
+		m_fence->SetEventOnCompletion(fence, m_fence_event) >> chk;
+		WaitForSingleObject(m_fence_event, INFINITE);
+	}
+	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
 }
