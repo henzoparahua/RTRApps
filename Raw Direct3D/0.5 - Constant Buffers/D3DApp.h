@@ -15,27 +15,36 @@ class D3DApp : public DXSample
 		XMFLOAT4 color;
 	};
 
+	struct SceneConstantBuffeer
+	{
+		XMFLOAT4 offset;
+		float padding[60];
+	};
+	static_assert((sizeof(SceneConstantBuffeer) % 256) == 0, "Constant Buffer size must be 256-byte aligned.");
+
 	//	Pipeline Objects
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissor_rect;
 	ComPtr<IDXGISwapChain4> m_swap_chain;
 	ComPtr<ID3D12Device2> m_device;
-	ComPtr<ID3D12Resource> m_render_targets[num_frames];
+	ComPtr<ID3D12Resource>  m_render_targets[num_frames];
 	ComPtr<ID3D12CommandAllocator> m_command_allocator;
-	ComPtr<ID3D12CommandAllocator> m_bundle_allocator;
 	ComPtr<ID3D12CommandQueue> m_command_queue;
-	ComPtr<ID3D12RootSignature> m_root_signature;
+	ComPtr<ID3D12RootSignature1> m_root_signature;
 	ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
+	ComPtr<ID3D12DescriptorHeap> m_cbv_heap;
 	ComPtr<ID3D12PipelineState> m_pipeline_state;
 	ComPtr<ID3D12GraphicsCommandList> m_command_list;
-	ComPtr<ID3D12GraphicsCommandList> m_bundle;
 	UINT m_rtv_descriptor_size;
-	
-	//	Resources
-	D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
-	ComPtr<ID3D12Resource> m_vertex_buffer;
 
-	//	Synchronization Objects
+	//	Resources
+	ComPtr<ID3D12Resource> m_vertex_buffer;
+	D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
+	ComPtr<ID3D12Resource> m_constant_buffer;
+	SceneConstantBuffeer m_constant_buffer_data;
+	UINT8* m_cbv_data_begin;
+
+	//	Syncronization Objects
 	UINT m_frame_index;
 	HANDLE m_fence_event;
 	ComPtr<ID3D12Fence> m_fence;
@@ -54,4 +63,3 @@ public:
 	virtual void OnRender();
 	virtual void OnDestroy();
 };
-
