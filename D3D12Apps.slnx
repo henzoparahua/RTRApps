@@ -4,10 +4,11 @@
     <Platform Name="x86" />
   </Configurations>
   <Folder Name="/Raw DirectX 12/">
-    <Project Path="0.4 - Hello Bundles/0.4 - Hello Bundles.vcxproj" Id="3b3a37fd-1f68-414b-96c1-d57fd30a8715" />
     <Project Path="Raw Direct3D/0.1 - Hello Direct3D/0.1 - Hello Direct3D.vcxproj" Id="dfed592b-50b9-4635-bd54-99ab355198c0" />
     <Project Path="Raw Direct3D/0.2 - Hello Triangle/0.2 - Hello Triangle.vcxproj" Id="13e378c7-03c2-477b-bdc9-2299b5315c5d" />
     <Project Path="Raw Direct3D/0.3 - Hello Texture/0.3 - Hello Texture.vcxproj" Id="91404f9f-d741-4419-972c-9ab6498da10a" />
+    <Project Path="Raw Direct3D/0.4 - Hello Bundles/0.4 - Hello Bundles.vcxproj" Id="3b3a37fd-1f68-414b-96c1-d57fd30a8715" />
+    <Project Path="Raw Direct3D/0.5 - Constant Buffers/0.5 - Constant Buffers.vcxproj" Id="a99d4e81-5517-40ff-94ce-5e8c3e19cec5" />
   </Folder>
   <Project Path="../Win32Apps/Win32Apps.vcxproj" Id="d5c1d345-8743-430e-a469-2429bf8db2b1" />
 </Solution>
