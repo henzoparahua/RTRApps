@@ -15,12 +15,12 @@ class D3DApp : public DXSample
 		XMFLOAT4 color;
 	};
 
-	struct SceneConstantBuffeer
+	struct SceneConstantBuffer
 	{
 		XMFLOAT4 offset;
 		float padding[60];
 	};
-	static_assert((sizeof(SceneConstantBuffeer) % 256) == 0, "Constant Buffer size must be 256-byte aligned.");
+	static_assert((sizeof(SceneConstantBuffer) % 256) == 0, "Constant Buffer size must be 256-byte aligned.");
 
 	//	Pipeline Objects
 	CD3DX12_VIEWPORT m_viewport;
@@ -41,7 +41,7 @@ class D3DApp : public DXSample
 	ComPtr<ID3D12Resource> m_vertex_buffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
 	ComPtr<ID3D12Resource> m_constant_buffer;
-	SceneConstantBuffeer m_constant_buffer_data;
+	SceneConstantBuffer m_constant_buffer_data;
 	UINT8* m_cbv_data_begin;
 
 	//	Syncronization Objects
