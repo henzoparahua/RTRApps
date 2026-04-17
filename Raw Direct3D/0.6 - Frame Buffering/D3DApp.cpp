@@ -147,12 +147,26 @@ void D3DApp::LoadAssets()
 			}
 		}
 
-		CD3DX12_ROOT_SIGNATURE_DESC root_signature_desc;
-		root_signature_desc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags{
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
+		};
+
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
+
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc;
+		root_signature_desc.Init_1_1(0, nullptr, 0, nullptr, root_signature_flags);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		D3D12SerializeRootSignature(&root_signature_desc, feature_data.HighestVersion, &signature, &error) >> chk;
+		D3DX12SerializeVersionedRootSignature(&root_signature_desc, feature_data.HighestVersion, &signature, &error) >> chk;
 		m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_root_signature)) >> chk;
 	}
 
@@ -180,6 +194,8 @@ void D3DApp::LoadAssets()
 		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		pso_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		pso_desc.DepthStencilState.DepthEnable = FALSE;
+		pso_desc.DepthStencilState.StencilEnable = FALSE;
+		pso_desc.SampleMask = UINT_MAX;
 		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		pso_desc.NumRenderTargets = 1;
 		pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -220,9 +236,9 @@ void D3DApp::LoadAssets()
 				IID_PPV_ARGS(&m_vertex_buffer)
 			) >> chk;
 		}
-		UINT8* vertex_data_begin{ nullptr };
+		UINT8* vertex_data_begin;
 		CD3DX12_RANGE read_range(0, 0);
-		m_vertex_buffer->Map(0, &read_range, reinterpret_cast<void**>(vertex_data_begin)) >> chk;
+		m_vertex_buffer->Map(0, &read_range, reinterpret_cast<void**>(&vertex_data_begin)) >> chk;
 		memcpy(vertex_data_begin, triangle_vertices, sizeof(triangle_vertices));
 		m_vertex_buffer->Unmap(0, nullptr);
 
