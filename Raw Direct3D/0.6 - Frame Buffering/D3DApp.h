@@ -1,0 +1,55 @@
+#pragma once
+#include <stdafx.h>
+#include <DXSample.h>
+
+using namespace DirectX;
+using Microsoft::WRL::ComPtr;
+
+class D3DApp : DXSample
+{
+	static const INT num_frames{ 2 };
+
+	struct Vertex
+	{
+		XMFLOAT3 position;
+		XMFLOAT4 color;
+	};
+
+	//	Pipeline Objects
+	CD3DX12_VIEWPORT m_viewport;
+	CD3DX12_RECT m_scissor_rect;
+	ComPtr<IDXGISwapChain4> m_swap_chain;
+	ComPtr<ID3D12Device15> m_device;
+	ComPtr<ID3D12Resource2> m_render_targets[num_frames];
+	ComPtr<ID3D12CommandAllocator> m_command_allocators[num_frames];
+	ComPtr<ID3D12CommandQueue1> m_command_queue;
+	ComPtr<ID3D12RootSignature1> m_root_signature;
+	ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
+	ComPtr<ID3D12PipelineState1> m_pipeline_state;
+	ComPtr<ID3D12GraphicsCommandList10> m_command_list;
+	UINT m_rtv_descriptor_size;
+
+	//	Resources
+	ComPtr<ID3D12Resource2> m_vertex_buffer;
+	D3D12_VERTEX_BUFFER_VIEW m_vertex_buffer_view;
+
+	//	Synchronization Objects
+	UINT m_frame_index;
+	HANDLE m_fence_event;
+	ComPtr<ID3D12Fence1> m_fence;
+	UINT64 m_fence_values[num_frames];
+
+	void LoadPipeline();
+	void LoadAssets();
+	void PopulateCommandList();
+	void WaitForGPU();
+	void MoveToNextFrame();
+
+public:
+	D3DApp(UINT width, UINT height, std::wstring name);
+
+	virtual void OnInit();
+	virtual void OnUpdate();
+	virtual void OnRender();
+	virtual void OnDestroy();
+};
