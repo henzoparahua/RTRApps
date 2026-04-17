@@ -187,4 +187,110 @@ void D3DApp::LoadAssets()
 
 		m_device->CreateGraphicsPipelineState(&pso_desc, IID_PPV_ARGS(&m_pipeline_state)) >> chk;
 	}
+
+	m_device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_command_allocators[m_frame_index].Get(),
+		m_pipeline_state.Get(),
+		IID_PPV_ARGS(&m_command_list)
+	) >> chk;
+	m_command_list->Close();
+
+	//	Geometria dos vertices e coisa e tal
+	{
+		//	Geometry for a triangle
+		Vertex triangle_vertices[]{
+			{ { 0.0f, 0.3f * m_aspectRatio, 0.0f }, { 0.275f, 0.835f, 1.0f, 1.0f } },
+			{ { 0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.875f, 0.61f, 0.93f, 1.0f } },
+			{ { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.9f, 0.9f, 0.5f } }
+		};
+
+		const UINT vertices_buffer_size{ sizeof(triangle_vertices) };
+
+		{
+			auto heap_properties{ CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD) };
+			auto resource_desc_size{ CD3DX12_RESOURCE_DESC::Buffer(vertices_buffer_size) };
+			m_device->CreateCommittedResource(
+				&heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&resource_desc_size,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_vertex_buffer)
+			) >> chk;
+		}
+		UINT8* vertex_data_begin;
+		CD3DX12_RANGE read_range(0, 0);
+		m_vertex_buffer->Map(0, &read_range, reinterpret_cast<void**>(vertex_data_begin)) >> chk;
+		memcpy(vertex_data_begin, triangle_vertices, sizeof(triangle_vertices));
+		m_vertex_buffer->Unmap(0, nullptr);
+
+		m_vertex_buffer_view.BufferLocation = m_vertex_buffer->GetGPUVirtualAddress();
+		m_vertex_buffer_view.SizeInBytes = vertices_buffer_size;
+		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
+	}
+
+	//	Sincronização dos objetos até serem jogados na GPU corretamente.
+	{
+		m_device->CreateFence(m_fence_values[m_frame_index], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)) >> chk;
+		m_fence_values[m_frame_index]++;
+
+		m_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (m_fence_event == nullptr) {
+			HRESULT_FROM_WIN32(GetLastError()) >> chk;
+		}	
+		
+		WaitForGPU();
+	}
+}
+
+void D3DApp::OnUpdate() { }
+
+void D3DApp::OnRender() 
+{
+	PopulateCommandList();
+
+	ID3D12CommandList* command_lists_addresses[]{ m_command_list.Get() };
+	m_command_queue->ExecuteCommandLists(_countof(command_lists_addresses), command_lists_addresses);
+
+	m_swap_chain->Present(1, 0) >> chk;
+
+	MoveToNextFrame();
+}
+
+void D3DApp::OnDestroy()
+{
+	WaitForGPU();
+	CloseHandle(m_fence_event);
+}
+
+void D3DApp::PopulateCommandList()
+{
+	m_command_allocators[m_frame_index]->Reset() >> chk;
+	m_command_list->Reset(m_command_allocators[m_frame_index].Get(), m_pipeline_state.Get()) >> chk;
+
+	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
+	m_command_list->RSSetViewports(1, &m_viewport);
+	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
+
+	{
+		auto resource_barrier{
+			CD3DX12_RESOURCE_BARRIER::Transition(
+				m_render_targets[m_frame_index].Get(),
+				D3D12_RESOURCE_STATE_PRESENT,
+				D3D12_RESOURCE_STATE_RENDER_TARGET
+			)
+		};
+		m_command_list->ResourceBarrier(1, &resource_barrier);
+	}
+	
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(m_rtv_heap->GetCPUDescriptorHandleForHeapStart(), m_frame_index, m_rtv_descriptor_size);
+	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
+
+	const float clear_color[] = { 0.1f, 0.1f, 0.15f, 1.0f };
+	m_command_list->ClearRenderTargetView(rtv_handle, clear_color, 0, nullptr);
+	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+	m_command_list->DrawInstanced(3, 1, 0, 0);
 }
