@@ -1,3 +1,4 @@
+#pragma once
 #include "D3DApp.h"
 
 _Use_decl_annotations_

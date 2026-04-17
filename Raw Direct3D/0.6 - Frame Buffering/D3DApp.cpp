@@ -220,7 +220,7 @@ void D3DApp::LoadAssets()
 				IID_PPV_ARGS(&m_vertex_buffer)
 			) >> chk;
 		}
-		UINT8* vertex_data_begin;
+		UINT8* vertex_data_begin{ nullptr };
 		CD3DX12_RANGE read_range(0, 0);
 		m_vertex_buffer->Map(0, &read_range, reinterpret_cast<void**>(vertex_data_begin)) >> chk;
 		memcpy(vertex_data_begin, triangle_vertices, sizeof(triangle_vertices));
@@ -284,7 +284,7 @@ void D3DApp::PopulateCommandList()
 		};
 		m_command_list->ResourceBarrier(1, &resource_barrier);
 	}
-	
+
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(m_rtv_heap->GetCPUDescriptorHandleForHeapStart(), m_frame_index, m_rtv_descriptor_size);
 	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 
@@ -293,4 +293,45 @@ void D3DApp::PopulateCommandList()
 	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
 	m_command_list->DrawInstanced(3, 1, 0, 0);
+
+	{
+		auto resource_barrier_transition{
+			CD3DX12_RESOURCE_BARRIER::Transition(
+				m_render_targets[m_frame_index].Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_PRESENT
+		) };
+		m_command_list->ResourceBarrier(
+			1,
+			&resource_barrier_transition
+		);
+	}
+	
+	m_command_list->Close() >> chk;
+}
+
+void D3DApp::WaitForGPU()
+{
+	m_command_queue->Signal(m_fence.Get(), m_fence_values[m_frame_index]) >> chk;
+	
+	m_fence->SetEventOnCompletion(m_fence_values[m_frame_index], m_fence_event) >> chk;
+	WaitForSingleObjectEx(m_fence_event, INFINITE, FALSE);
+
+	m_fence_values[m_frame_index]++;
+}
+
+void D3DApp::MoveToNextFrame()
+{
+	const UINT64 current_fence_value{ m_fence_values[m_frame_index] };
+	m_command_queue->Signal(m_fence.Get(), current_fence_value);
+
+	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
+
+	if (m_fence->GetCompletedValue() < m_fence_values[m_frame_index])
+	{
+		m_fence->SetEventOnCompletion(m_fence_values[m_frame_index], m_fence_event) >> chk;
+		WaitForSingleObjectEx(m_fence_event, INFINITE, FALSE);
+	}
+
+	m_fence_values[m_frame_index] = current_fence_value + 1;
 }

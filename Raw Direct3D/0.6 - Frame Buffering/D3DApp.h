@@ -5,7 +5,7 @@
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
-class D3DApp : DXSample
+class D3DApp : public DXSample
 {
 	static const INT num_frames{ 2 };
 
@@ -19,10 +19,10 @@ class D3DApp : DXSample
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissor_rect;
 	ComPtr<IDXGISwapChain4> m_swap_chain;
-	ComPtr<ID3D12Device15> m_device;
+	ComPtr<ID3D12Device4> m_device;
 	ComPtr<ID3D12Resource2> m_render_targets[num_frames];
 	ComPtr<ID3D12CommandAllocator> m_command_allocators[num_frames];
-	ComPtr<ID3D12CommandQueue1> m_command_queue;
+	ComPtr<ID3D12CommandQueue> m_command_queue;
 	ComPtr<ID3D12RootSignature1> m_root_signature;
 	ComPtr<ID3D12DescriptorHeap> m_rtv_heap;
 	ComPtr<ID3D12PipelineState1> m_pipeline_state;
