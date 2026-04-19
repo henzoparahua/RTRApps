@@ -147,5 +147,150 @@ void D3DApp::LoadPipeline()
 
 void D3DApp::LoadAssets()
 {
-	
+	{
+		D3D12_FEATURE_DATA_ROOT_SIGNATURE feature_data{};
+		static const D3D_ROOT_SIGNATURE_VERSION root_signature_levels[]{
+			D3D_ROOT_SIGNATURE_VERSION_1_2, 
+			D3D_ROOT_SIGNATURE_VERSION_1_1, 
+			D3D_ROOT_SIGNATURE_VERSION_1_0
+		};
+		for (auto level : root_signature_levels) {
+			feature_data.HighestVersion = level;
+
+			if (SUCCEEDED(m_device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &feature_data, sizeof(feature_data))))
+			{
+				break;
+			}
+		}
+
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
+		
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+
+		D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags{
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
+		};
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc;
+		root_signature_desc.Init_1_1(
+			_countof(root_parameters)
+			, root_parameters, 
+			0, nullptr, 
+			root_signature_flags
+		);
+		
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		D3DX12SerializeVersionedRootSignature(
+			&root_signature_desc,
+			feature_data.HighestVersion,
+			&signature, &error
+		) >> chk;
+		m_device->CreateRootSignature(
+			0,
+			signature->GetBufferPointer(),
+			signature->GetBufferSize(),
+			IID_PPV_ARGS(&m_root_signature)
+		) >> chk;
+	}
+
+	//	Pipeline State e coisa e tal
+	{
+		UINT8* vertex_shader_data_address{ nullptr };
+		UINT8* pixel_shader_data_address{ nullptr };
+		UINT vertex_shader_data_length{ 0 };
+		UINT pixel_shader_data_length{ 0 };
+
+		ReadDataFromFile(
+			GetAssetFullPath(L"shaders_VSMain.cso").c_str(), 
+			&vertex_shader_data_address, 
+			&vertex_shader_data_length
+		) >> chk;
+		ReadDataFromFile(
+			GetAssetFullPath(L"shaders_PSMain.cso").c_str(),
+			&pixel_shader_data_address,
+			&pixel_shader_data_length
+		) >> chk;
+		
+		D3D12_INPUT_ELEMENT_DESC input_element_descs[]
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		};
+
+		//	Describe and Create the PSO
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
+		pso_desc.InputLayout = { input_element_descs, _countof(input_element_descs) };
+		pso_desc.pRootSignature = m_root_signature.Get();
+		pso_desc.VS = CD3DX12_SHADER_BYTECODE(vertex_shader_data_address, vertex_shader_data_length);
+		pso_desc.PS = CD3DX12_SHADER_BYTECODE(pixel_shader_data_address, pixel_shader_data_length);
+		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		pso_desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		pso_desc.DepthStencilState.DepthEnable = FALSE;
+		pso_desc.DepthStencilState.StencilEnable = FALSE;
+		pso_desc.SampleMask = UINT_MAX;
+		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		pso_desc.NumRenderTargets = 1;
+		pso_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		pso_desc.SampleDesc.Count = 1;
+		m_device->CreateGraphicsPipelineState(
+			&pso_desc,
+			IID_PPV_ARGS(&m_pipeline_state)
+		) >> chk;
+	}
+
+	m_device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_command_allocators[m_frame_index].Get(),
+		m_pipeline_state.Get(),
+		IID_PPV_ARGS(&m_command_list)
+	) >> chk;
+	m_command_list->Close();
+
+	//	Geometria e coisa e tal
+	{
+		//	Triangle geometry
+		Vertex triangle_vertices[]{
+			{ { 0.0f, 0.3f * m_aspectRatio, 0.0f }, { 0.275f, 0.835f, 1.0f, 1.0f } },
+			{ { 0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.875f, 0.61f, 0.93f, 1.0f } },
+			{ { -0.4f, -0.3f * m_aspectRatio, 0.0f }, { 0.0f, 0.9f, 0.9f, 0.5f } }
+		};
+
+		const UINT vertices_buffer_size{ sizeof(triangle_vertices) };
+
+		{
+			auto heap_properties{ CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD) };
+			auto resource_desc_size{ CD3DX12_RESOURCE_DESC::Buffer(vertices_buffer_size) };
+			m_device->CreateCommittedResource(
+				&heap_properties,
+				D3D12_HEAP_FLAG_NONE,
+				&resource_desc_size,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_vertex_buffer)
+			) >> chk;
+		}
+
+		UINT8* vertex_data_begin;
+		CD3DX12_RANGE read_range(0, 0);
+		m_vertex_buffer->Map(0, &read_range, reinterpret_cast<void**>(&vertex_data_begin)) >> chk;
+		memcpy(vertex_data_begin, triangle_vertices, sizeof(triangle_vertices));
+		m_vertex_buffer->Unmap(0, nullptr);
+
+		m_vertex_buffer_view.BufferLocation = m_vertex_buffer->GetGPUVirtualAddress();
+		m_vertex_buffer_view.SizeInBytes = vertices_buffer_size;
+		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
+	}
+
+	//	Bundle
+	{
+
+	}
 }
