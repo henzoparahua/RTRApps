@@ -47,7 +47,7 @@ class D3DApp : public DXSample {
 	UINT m_frame_index;
 	HANDLE m_fence_event;
 	ComPtr<ID3D12Fence> m_fence;
-	UINT64 m_fence_values;
+	UINT64 m_fence_values[num_frames];
 
 	void LoadPipeline();
 	void LoadAssets();
@@ -59,7 +59,7 @@ public:
 	D3DApp(UINT width, UINT height, std::wstring name);
 
 	virtual void OnInit();
-	virtual void OnUpadate();
+	virtual void OnUpdate();
 	virtual void OnRender();
 	virtual void OnDestroy();
 };

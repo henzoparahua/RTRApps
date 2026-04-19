@@ -118,6 +118,7 @@ void D3DApp::LoadPipeline()
 
 		//	CBV
 		D3D12_DESCRIPTOR_HEAP_DESC cbv_heap_desc{};
+		cbv_heap_desc.NumDescriptors = 1;
 		cbv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		cbv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		m_device->CreateDescriptorHeap(&cbv_heap_desc, IID_PPV_ARGS(&m_cbv_heap));
@@ -289,8 +290,173 @@ void D3DApp::LoadAssets()
 		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 	}
 
-	//	Bundle
+	//	Constant Buffer
 	{
+		const UINT constant_buffer_size = sizeof(SceneConstantBuffer);
+		auto resource_desc{ CD3DX12_RESOURCE_DESC::Buffer(constant_buffer_size) };
+		auto heap_properties{ CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD) };
+		m_device->CreateCommittedResource(
+			&heap_properties,
+			D3D12_HEAP_FLAG_NONE,
+			&resource_desc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&m_constant_buffer)
+		) >> chk;
 
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc{};
+		cbv_desc.BufferLocation = m_constant_buffer->GetGPUVirtualAddress();
+		cbv_desc.SizeInBytes = constant_buffer_size;
+		m_device->CreateConstantBufferView(&cbv_desc, m_cbv_heap->GetCPUDescriptorHandleForHeapStart());
+
+		CD3DX12_RANGE read_range(0, 0);
+		m_constant_buffer->Map(0, &read_range, reinterpret_cast<void**>(&m_cbv_data_begin)) >> chk;
+		memcpy(m_cbv_data_begin, &m_constant_buffer_data, sizeof(m_constant_buffer_data));
 	}
+
+	//	Gravando o Bundle
+	{
+		m_device->CreateCommandList(
+			0,
+			D3D12_COMMAND_LIST_TYPE_BUNDLE,
+			m_bundle_allocator[m_frame_index].Get(),
+			m_pipeline_state.Get(),
+			IID_PPV_ARGS(&m_bundle)
+		);
+		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
+		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+		m_bundle->DrawInstanced(3, 1, 0, 0);
+		m_bundle->Close() >> chk;
+	}
+
+	//	Fence Sync
+	{
+		m_device->CreateFence(m_fence_values[m_frame_index], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)) >> chk;
+		m_fence_values[m_frame_index]++;
+		m_fence_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		if (m_fence_event == nullptr) {
+			HRESULT_FROM_WIN32(GetLastError()) >> chk;
+		}
+
+		WaitForGPU();
+	}
+}
+
+void D3DApp::OnUpdate()
+{
+	const float translation_speed{ 0.04f };
+	const float offset_bounds{ 0.32f };
+	bool direction{ false };
+	
+	if (m_constant_buffer_data.offset.x > offset_bounds)
+	{
+		direction = true;
+	}
+	if (m_constant_buffer_data.offset.x > -offset_bounds)
+	{
+		direction = false;
+	}
+
+	if (direction) {
+		m_constant_buffer_data.offset.x -= translation_speed;
+	}
+	else {
+		m_constant_buffer_data.offset.x += translation_speed;
+	}
+
+	memcpy(m_cbv_data_begin, &m_constant_buffer_data, sizeof(m_constant_buffer_data));
+}
+
+void D3DApp::OnRender()
+{
+	PopulateCommandList();
+
+	ID3D12CommandList* command_lists_addresses[]{ m_command_list.Get() };
+	m_command_queue->ExecuteCommandLists(_countof(command_lists_addresses), command_lists_addresses);
+	
+	m_swap_chain->Present(1, 0) >> chk;
+	
+	MoveToNextFrame();
+}
+
+void D3DApp::OnDestroy()
+{
+	WaitForGPU();
+	CloseHandle(m_fence_event);
+}
+
+void D3DApp::PopulateCommandList()
+{
+	m_command_allocators[m_frame_index]->Reset() >> chk;
+	m_command_list->Reset(m_command_allocators[m_frame_index].Get(), m_pipeline_state.Get()) >> chk;
+	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
+
+	ID3D12DescriptorHeap* heaps[]{ m_cbv_heap.Get() };
+	m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
+
+	m_command_list->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
+	m_command_list->RSSetViewports(1, &m_viewport);
+	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
+
+	{
+		auto resource_barrier{
+			CD3DX12_RESOURCE_BARRIER::Transition(
+				m_render_targets[m_frame_index].Get(),
+				D3D12_RESOURCE_STATE_PRESENT,
+				D3D12_RESOURCE_STATE_RENDER_TARGET
+			) 
+		};
+		m_command_list->ResourceBarrier(1, &resource_barrier);
+	}
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_handle(
+		m_rtv_heap->GetCPUDescriptorHandleForHeapStart(),
+		m_frame_index,
+		m_rtv_descriptor_size
+	);
+
+	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
+	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
+	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
+
+	m_command_list->ExecuteBundle(m_bundle.Get());
+	
+	{
+		auto resource_barrier{
+			CD3DX12_RESOURCE_BARRIER::Transition(
+				m_render_targets[m_frame_index].Get(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_PRESENT
+			)
+		};
+		m_command_list->ResourceBarrier(1, &resource_barrier);
+	}
+
+	m_command_list->Close() >> chk;
+}
+
+void D3DApp::WaitForGPU()
+{
+	m_command_queue->Signal(m_fence.Get(), m_fence_values[m_frame_index]) >> chk;
+
+	m_fence->SetEventOnCompletion(m_fence_values[m_frame_index], m_fence_event) >> chk;
+	WaitForSingleObjectEx(m_fence_event, INFINITE, FALSE);
+
+	m_fence_values[m_frame_index]++;
+}
+
+void D3DApp::MoveToNextFrame()
+{
+	const UINT64 current_fence_value{ m_fence_values[m_frame_index] };
+	m_command_queue->Signal(m_fence.Get(), current_fence_value);
+	m_frame_index = m_swap_chain->GetCurrentBackBufferIndex();
+
+	if (m_fence->GetCompletedValue() < m_fence_values[m_frame_index])
+	{
+		m_fence->SetEventOnCompletion(m_fence_values[m_frame_index], m_fence_event) >> chk;
+		WaitForSingleObjectEx(m_fence_event, INFINITE, FALSE);
+	}
+
+	m_fence_values[m_frame_index] = current_fence_value + 1;
 }
