@@ -10,6 +10,7 @@
     <Project Path="Raw Direct3D/0.4 - Hello Bundles/0.4 - Hello Bundles.vcxproj" Id="3b3a37fd-1f68-414b-96c1-d57fd30a8715" />
     <Project Path="Raw Direct3D/0.5 - Constant Buffers/0.5 - Constant Buffers.vcxproj" Id="a99d4e81-5517-40ff-94ce-5e8c3e19cec5" />
     <Project Path="Raw Direct3D/0.6 - Frame Buffering/0.6 - Frame Buffering.vcxproj" Id="e011377e-9417-4627-9ede-d75396e143a4" />
+    <Project Path="Raw Direct3D/1.0 - Hello Basics/1.0 - Hello Basics.vcxproj" Id="96bce6c3-8576-4a27-97b7-48892feda299" />
   </Folder>
   <Project Path="../Win32Apps/Win32Apps.vcxproj" Id="d5c1d345-8743-430e-a469-2429bf8db2b1" />
 </Solution>
