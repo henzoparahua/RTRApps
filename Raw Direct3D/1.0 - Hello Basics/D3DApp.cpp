@@ -289,8 +289,8 @@ void D3DApp::LoadAssets()
 		m_vertex_buffer_view.SizeInBytes = vertices_buffer_size;
 		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 	}
-
-	//	Constant Buffer
+	
+	//	Constant Buffer . . .
 	{
 		const UINT constant_buffer_size = sizeof(SceneConstantBuffer);
 		auto resource_desc{ CD3DX12_RESOURCE_DESC::Buffer(constant_buffer_size) };
