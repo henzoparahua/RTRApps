@@ -167,7 +167,7 @@ void D3DApp::LoadAssets()
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
 		
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
 		root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
 
 		D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags{
@@ -345,15 +345,15 @@ void D3DApp::LoadAssets()
 
 void D3DApp::OnUpdate()
 {
-	const float translation_speed{ 0.04f };
+	const float translation_speed{ 0.0016f };
 	const float offset_bounds{ 0.32f };
-	bool direction{ false };
-	
+	static bool direction{ false };
+
 	if (m_constant_buffer_data.offset.x > offset_bounds)
 	{
 		direction = true;
 	}
-	if (m_constant_buffer_data.offset.x > -offset_bounds)
+	if (m_constant_buffer_data.offset.x < -offset_bounds)
 	{
 		direction = false;
 	}
@@ -390,12 +390,12 @@ void D3DApp::PopulateCommandList()
 {
 	m_command_allocators[m_frame_index]->Reset() >> chk;
 	m_command_list->Reset(m_command_allocators[m_frame_index].Get(), m_pipeline_state.Get()) >> chk;
-	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
 
+	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
 	ID3D12DescriptorHeap* heaps[]{ m_cbv_heap.Get() };
 	m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
-
 	m_command_list->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
+
 	m_command_list->RSSetViewports(1, &m_viewport);
 	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
@@ -419,9 +419,7 @@ void D3DApp::PopulateCommandList()
 	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
 	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
-
 	m_command_list->ExecuteBundle(m_bundle.Get());
-	
 	{
 		auto resource_barrier{
 			CD3DX12_RESOURCE_BARRIER::Transition(
