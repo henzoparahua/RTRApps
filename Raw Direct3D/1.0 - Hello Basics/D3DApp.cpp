@@ -324,11 +324,10 @@ void D3DApp::LoadAssets()
 			IID_PPV_ARGS(&m_bundle)
 		);
 
-		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
-		m_bundle->DrawInstanced(3, 1, 0, 0);
-
-		m_bundle->Close() >> chk;
+		//	m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//	m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+		//	m_bundle->DrawInstanced(3, 1, 0, 0);
+		//	m_bundle->Close() >> chk;
 	}
 
 	//	Fence Sync
@@ -419,7 +418,11 @@ void D3DApp::PopulateCommandList()
 	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
 	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
-	m_command_list->ExecuteBundle(m_bundle.Get());
+	//	m_command_list->ExecuteBundle(m_bundle.Get());
+	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+	m_command_list->DrawInstanced(3, 1, 0, 0);
+
 	{
 		auto resource_barrier{
 			CD3DX12_RESOURCE_BARRIER::Transition(
