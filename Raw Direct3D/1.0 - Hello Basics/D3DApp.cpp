@@ -167,7 +167,7 @@ void D3DApp::LoadAssets()
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
 		
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE);
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
 		root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
 
 		D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags{
@@ -323,10 +323,11 @@ void D3DApp::LoadAssets()
 			m_pipeline_state.Get(),
 			IID_PPV_ARGS(&m_bundle)
 		);
-		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
+
 		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
 		m_bundle->DrawInstanced(3, 1, 0, 0);
+
 		m_bundle->Close() >> chk;
 	}
 
@@ -394,8 +395,8 @@ void D3DApp::PopulateCommandList()
 	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
 	ID3D12DescriptorHeap* heaps[]{ m_cbv_heap.Get() };
 	m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
-	m_command_list->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
 
+	m_command_list->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
 	m_command_list->RSSetViewports(1, &m_viewport);
 	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
@@ -415,7 +416,6 @@ void D3DApp::PopulateCommandList()
 		m_frame_index,
 		m_rtv_descriptor_size
 	);
-
 	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
 	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
