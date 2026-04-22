@@ -1,6 +1,7 @@
 #pragma once
 #include <stdafx.h>
 #include <DXSample.h>
+#include "StepTimer.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -42,9 +43,11 @@ class D3DApp : public DXSample {
 	ComPtr<ID3D12Resource> m_constant_buffer;
 	SceneConstantBuffer m_constant_buffer_data;
 	UINT8* m_cbv_data_begin;
+	StepTimer m_timer;
 
 	//	Synchronization Objects
 	UINT m_frame_index;
+	UINT m_frame_counter;
 	HANDLE m_fence_event;
 	ComPtr<ID3D12Fence> m_fence;
 	UINT64 m_fence_values[num_frames];
@@ -54,6 +57,21 @@ class D3DApp : public DXSample {
 	void PopulateCommandList();
 	void WaitForGPU();
 	void MoveToNextFrame();
+
+	void ShowFPS()
+	{
+		m_timer.Tick(NULL);
+
+		if (m_frame_counter == 500)
+		{
+			wchar_t fps[64];
+			swprintf_s(fps, L"%ufps", m_timer.GetFramesPerSecond());
+			SetCustomWindowText(fps);
+			m_frame_counter = 0;
+		}
+
+		m_frame_counter++;
+	}
 
 public:
 	D3DApp(UINT width, UINT height, std::wstring name);

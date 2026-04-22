@@ -29,8 +29,11 @@
     <ClInclude Include="D3DApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="StepTimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shaders.hlsl" />
+    <CustomBuild Include="shaders.hlsl" />
   </ItemGroup>
 </Project>

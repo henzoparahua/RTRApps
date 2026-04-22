@@ -290,7 +290,7 @@ void D3DApp::LoadAssets()
 		m_vertex_buffer_view.StrideInBytes = sizeof(Vertex);
 	}
 	
-	//	Constant Buffer . . .
+	//	Constant Buffer
 	{
 		const UINT constant_buffer_size = sizeof(SceneConstantBuffer);
 		auto resource_desc{ CD3DX12_RESOURCE_DESC::Buffer(constant_buffer_size) };
@@ -324,10 +324,12 @@ void D3DApp::LoadAssets()
 			IID_PPV_ARGS(&m_bundle)
 		);
 
-		//	m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		//	m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
-		//	m_bundle->DrawInstanced(3, 1, 0, 0);
-		//	m_bundle->Close() >> chk;
+		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
+		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+		
+		m_bundle->DrawInstanced(3, 1, 0, 0);
+		m_bundle->Close() >> chk;
 	}
 
 	//	Fence Sync
@@ -345,6 +347,8 @@ void D3DApp::LoadAssets()
 
 void D3DApp::OnUpdate()
 {
+	ShowFPS();
+
 	const float translation_speed{ 0.0016f };
 	const float offset_bounds{ 0.32f };
 	static bool direction{ false };
@@ -392,10 +396,13 @@ void D3DApp::PopulateCommandList()
 	m_command_list->Reset(m_command_allocators[m_frame_index].Get(), m_pipeline_state.Get()) >> chk;
 
 	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
+	
 	ID3D12DescriptorHeap* heaps[]{ m_cbv_heap.Get() };
 	m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
-
 	m_command_list->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
+	
+	m_command_list->ExecuteBundle(m_bundle.Get());
+	
 	m_command_list->RSSetViewports(1, &m_viewport);
 	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
@@ -418,10 +425,10 @@ void D3DApp::PopulateCommandList()
 	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
 	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
-	//	m_command_list->ExecuteBundle(m_bundle.Get());
-	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
-	m_command_list->DrawInstanced(3, 1, 0, 0);
+
+	//	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+	//	m_command_list->DrawInstanced(3, 1, 0, 0);
 
 	{
 		auto resource_barrier{
