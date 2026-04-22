@@ -27,7 +27,7 @@ class D3DApp : public DXSample {
 	ComPtr<ID3D12Device4> m_device;
 	ComPtr<ID3D12Resource2> m_render_targets[num_frames];
 	ComPtr<ID3D12CommandAllocator> m_command_allocators[num_frames];
-	ComPtr<ID3D12CommandAllocator> m_bundle_allocator[num_frames];
+	ComPtr<ID3D12CommandAllocator> m_bundle_allocators[num_frames];
 	ComPtr<ID3D12CommandQueue> m_command_queue;
 	ComPtr<ID3D12RootSignature> m_root_signature;
 	ComPtr<ID3D12DescriptorHeap> m_rtv_heap;

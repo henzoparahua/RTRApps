@@ -140,7 +140,7 @@ void D3DApp::LoadPipeline()
 			);
 			m_device->CreateCommandAllocator(
 				D3D12_COMMAND_LIST_TYPE_BUNDLE,
-				IID_PPV_ARGS(&m_bundle_allocator[n])
+				IID_PPV_ARGS(&m_bundle_allocators[n])
 			);
 		}
 	}
@@ -167,9 +167,10 @@ void D3DApp::LoadAssets()
 		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
 		CD3DX12_ROOT_PARAMETER1 root_parameters[1];
 		
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE);
-		root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
-
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		root_parameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_ALL);
+		//	root_parameters[0].InitAsConstantBufferView(0);
+		
 		D3D12_ROOT_SIGNATURE_FLAGS root_signature_flags{
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -319,16 +320,21 @@ void D3DApp::LoadAssets()
 		m_device->CreateCommandList(
 			0,
 			D3D12_COMMAND_LIST_TYPE_BUNDLE,
-			m_bundle_allocator[m_frame_index].Get(),
+			m_bundle_allocators[m_frame_index].Get(),
 			m_pipeline_state.Get(),
 			IID_PPV_ARGS(&m_bundle)
 		);
 
 		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
+
+		ID3D12DescriptorHeap* heaps[] = { m_cbv_heap.Get() };
+		m_bundle->SetDescriptorHeaps(_countof(heaps), heaps);
 		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+		m_bundle->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
 		
 		m_bundle->DrawInstanced(3, 1, 0, 0);
+
 		m_bundle->Close() >> chk;
 	}
 
@@ -395,13 +401,9 @@ void D3DApp::PopulateCommandList()
 	m_command_list->Reset(m_command_allocators[m_frame_index].Get(), m_pipeline_state.Get()) >> chk;
 
 	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
-	
-	ID3D12DescriptorHeap* heaps[]{ m_cbv_heap.Get() };
-	m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
-	m_command_list->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
-	
-	m_command_list->ExecuteBundle(m_bundle.Get());
-	
+	ID3D12DescriptorHeap* ppHeaps[] = { m_cbv_heap.Get() };
+	m_command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+
 	m_command_list->RSSetViewports(1, &m_viewport);
 	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
@@ -422,12 +424,11 @@ void D3DApp::PopulateCommandList()
 		m_rtv_descriptor_size
 	);
 	m_command_list->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
+
 	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
 	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
-
-	//	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
-	//	m_command_list->DrawInstanced(3, 1, 0, 0);
+	
+	m_command_list->ExecuteBundle(m_bundle.Get());
 
 	{
 		auto resource_barrier{
