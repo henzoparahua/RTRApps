@@ -348,7 +348,6 @@ void D3DApp::LoadAssets()
 void D3DApp::OnUpdate()
 {
 	ShowFPS();
-
 	const float translation_speed{ 0.0016f };
 	const float offset_bounds{ 0.32f };
 	static bool direction{ false };
