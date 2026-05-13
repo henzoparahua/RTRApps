@@ -315,7 +315,6 @@ void D3DApp::LoadAssets()
 		memcpy(m_cbv_data_begin, &m_constant_buffer_data, sizeof(m_constant_buffer_data));
 	}
 
-	//	Gravando o Bundle
 	{
 		m_device->CreateCommandList(
 			0,
@@ -324,15 +323,15 @@ void D3DApp::LoadAssets()
 			m_pipeline_state.Get(),
 			IID_PPV_ARGS(&m_bundle)
 		);
-
 		m_bundle->SetGraphicsRootSignature(m_root_signature.Get());
 
 		ID3D12DescriptorHeap* heaps[] = { m_cbv_heap.Get() };
+
 		m_bundle->SetDescriptorHeaps(_countof(heaps), heaps);
 		m_bundle->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		m_bundle->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
 		m_bundle->SetGraphicsRootDescriptorTable(0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart());
-		
+
 		m_bundle->DrawInstanced(3, 1, 0, 0);
 
 		m_bundle->Close() >> chk;
@@ -384,7 +383,7 @@ void D3DApp::OnRender()
 	ID3D12CommandList* command_lists_addresses[]{ m_command_list.Get() };
 	m_command_queue->ExecuteCommandLists(_countof(command_lists_addresses), command_lists_addresses);
 	
-	m_swap_chain->Present(1, 0) >> chk;
+	m_swap_chain->Present(1, 0) >>	 chk;
 	
 	MoveToNextFrame();
 }
@@ -401,9 +400,6 @@ void D3DApp::PopulateCommandList()
 	m_command_list->Reset(m_command_allocators[m_frame_index].Get(), m_pipeline_state.Get()) >> chk;
 
 	m_command_list->SetGraphicsRootSignature(m_root_signature.Get());
-	ID3D12DescriptorHeap* ppHeaps[] = { m_cbv_heap.Get() };
-	m_command_list->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
-
 	m_command_list->RSSetViewports(1, &m_viewport);
 	m_command_list->RSSetScissorRects(1, &m_scissor_rect);
 
@@ -427,8 +423,18 @@ void D3DApp::PopulateCommandList()
 
 	const float clearColor[] = { 0.1f, 0.1f, 0.15f, 1.0f };
 	m_command_list->ClearRenderTargetView(rtv_handle, clearColor, 0, nullptr);
-	
-	m_command_list->ExecuteBundle(m_bundle.Get());
+
+
+	ID3D12DescriptorHeap* heaps[] = { m_cbv_heap.Get() };
+
+	m_command_list->SetDescriptorHeaps(_countof(heaps), heaps);
+	m_command_list->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_command_list->IASetVertexBuffers(0, 1, &m_vertex_buffer_view);
+
+	m_command_list->DrawInstanced(3, 1, 0, 0);
+
+
+	//	m_command_list->ExecuteBundle(m_bundle.Get());
 
 	{
 		auto resource_barrier{
