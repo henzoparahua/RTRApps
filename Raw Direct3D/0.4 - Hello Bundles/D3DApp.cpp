@@ -121,19 +121,15 @@ void D3DApp::LoadAssets()
 {
 	//	Criando o Root Signature
 	{
-		D3D12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc{};
-		root_signature_desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_2;
-		root_signature_desc.Desc_1_2.NumParameters = 0;
-		root_signature_desc.Desc_1_2.pParameters = nullptr;
-		root_signature_desc.Desc_1_2.NumStaticSamplers = 0;
-		root_signature_desc.Desc_1_2.pStaticSamplers = nullptr;
-		root_signature_desc.Desc_1_2.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+		CD3DX12_ROOT_SIGNATURE_DESC root_signature_desc{};
+		root_signature_desc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
 
-		D3D12SerializeVersionedRootSignature(
+		D3D12SerializeRootSignature(
 			&root_signature_desc,
+			D3D_ROOT_SIGNATURE_VERSION_1,
 			&signature,
 			&error
 		) >> chk;
