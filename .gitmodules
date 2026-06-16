@@ -1,0 +1,3 @@
+[submodule "Win32Apps"]
+	path = Win32Apps
+	url = .\\Win32Apps\\
