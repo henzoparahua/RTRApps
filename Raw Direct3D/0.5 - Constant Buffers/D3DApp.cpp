@@ -2,11 +2,11 @@
 
 D3DApp::D3DApp(UINT width, UINT height, std::wstring name) :
 	DXSample(width, height, name),
-	m_frame_index(0),
 	m_viewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height)),
 	m_scissor_rect(0, 0, static_cast<LONG>(width), static_cast<LONG>(height)),
 	m_rtv_descriptor_size(0),
-	m_constant_buffer_data{}
+	m_constant_buffer_data{},
+	m_frame_index(0)
 {
 
 }
@@ -34,7 +34,7 @@ void D3DApp::LoadPipeline()
 
 	if (m_useWarpDevice)
 	{
-		ComPtr<IDXGIAdapter4> warp_adapter;
+		ComPtr<IDXGIAdapter> warp_adapter;
 		factory->EnumWarpAdapter(IID_PPV_ARGS(&warp_adapter)) >> chk;
 		D3D12CreateDevice(
 			warp_adapter.Get(),
@@ -43,31 +43,13 @@ void D3DApp::LoadPipeline()
 		) >> chk;
 	}
 	else {
-		//	Substituição do GetHardwareAdapter por isso
-		ComPtr<IDXGIAdapter1> temp_adapter;
-		ComPtr<IDXGIAdapter4> hardware_adapter;
-
-		for (
-			UINT i{ 0 }; 
-			DXGI_ERROR_NOT_FOUND != factory->EnumAdapterByGpuPreference(
-				i,
-				DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
-				IID_PPV_ARGS(&temp_adapter)
-			);
-			i++
-			)
-		{
-			if (SUCCEEDED(temp_adapter.As(&hardware_adapter))) {
-				DXGI_ADAPTER_DESC3 desc;
-				hardware_adapter->GetDesc3(&desc);
-
-				if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) { continue; }
-
-				if (SUCCEEDED(D3D12CreateDevice(temp_adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&m_device)))) {
-					break;
-				}
-			}
-		}
+		ComPtr<IDXGIAdapter1> hardware_adapter;
+		GetHardwareAdapter(factory.Get(), &hardware_adapter);
+		D3D12CreateDevice(
+			hardware_adapter.Get(),
+			D3D_FEATURE_LEVEL_12_1,
+			IID_PPV_ARGS(&m_device)
+		) >> chk;
 	}
 
 	D3D12_COMMAND_QUEUE_DESC queue_desc{};
